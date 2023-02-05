@@ -1,4 +1,4 @@
-package goenv
+package env
 
 import (
 	"log"
