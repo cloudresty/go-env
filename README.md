@@ -40,6 +40,7 @@ API_KEY=your_secret_api_key
 **Import and use the `goenv` package:**
 
 ```go
+
 package main
 
 import (
@@ -47,28 +48,41 @@ import (
     "https://github.com/cloudresty/goenv"
 )
 
-func main() {
-    // Load environment variables from .env
-    err := goenv.Load(".env")
-    if err != nil {
-        fmt.Println("Error loading .env:", err)
-        return
-    }
+// Global variables
+var (
+    dbHost = goenv.Get("DB_HOST")
+    dbPort = goenv.Get("DB_PORT")
+)
 
-    // Access environment variables
-    dbHost := goenv.Get("DB_HOST", "localhost")     // Get with default value
-    apiKey, exists := goenv.Lookup("API_KEY")       // Check existence and get value
+func main() {
+
+    // Load environment variables from .env (automatically)
+    goenv.Load()
 
     fmt.Println("DB_HOST:", dbHost)
+    fmt.Println("DB_PORT:", dbPort)
+
+    // Local variables with default values (if not set)
+    // WARNING: Use the below method ONLY for development purposes!
+    dbUser := goenv.Get("DB_USER", "root")
+    dbPass := goenv.Get("DB_PASS", "password")
+
+    // Example using Lookup
+    apiKeyVal, exists := goenv.Lookup("API_KEY")
     if exists {
-        fmt.Println("API_KEY:", apiKey)
-    } else {
-        fmt.Println("API_KEY not found.")
+        fmt.Println("API_KEY (Lookup):", apiKeyVal)
+    }
+
+    // Example loading a custom file
+    err := goenv.Load(".env.development")
+    if err != nil {
+        fmt.Println("Error loading .env.development:", err)
     }
 
     // Example using MustLoad (panics on error)
     // goenv.MustLoad(".env")
 }
+
 ```
 
 &nbsp;
@@ -77,12 +91,12 @@ func main() {
 
 &nbsp;
 
-`func Load(filename string) error`
+`Load(filename ...string) error`
 
-Loads environment variables from the specified .env file.
+Loads environment variables from the specified `.env` like `.env.development` or the default `.env` file if no filename is provided.
 
-* `filename`: The path to the `.env` file.
-* Returns an `error` if the file cannot be opened or read.
+* `filename ...string`: Optional path to the custom `.env` file. If no filename is provided, it loads from the default `.env` file. If the default `.env` file does not exist, no error is returned.
+* Returns an `error` if a specified custom file cannot be opened or read.
 * Ignores empty lines and lines starting with `#` (comments).
 * Only sets environment variables that are not already set in the current environment.
 
@@ -97,21 +111,21 @@ Retrieves the value of an environment variable.
 
 &nbsp;
 
-`Get(key string, defaultValue string) string`
+`Get(key string, defaultValue ...string) string`
 
-Retrieves the value of an environment variable, providing a default value if the variable is not set.
+Retrieves the value of an environment variable, optionally providing a default value if the variable is not found.
 
 * `key`: The name of the environment variable.
-* `defaultValue`: The default value to return if the variable is not set.
-* Returns the value of the variable or the default value.
+* `defaultValue ...string`: Optional value to return if the variable does not exist. If no default is provided, it returns an empty string.
+* Returns the value of the variable or the default value (or an empty string).
 
 &nbsp;
 
-`MustLoad(filename string)`
+`MustLoad(filename ...string)`
 
-Loads environment variables from the specified `.env` file and panics if an error occurs.
+Loads environment variables from the specified `.env` file or the default `.env` file and panics if an error occurs.
 
-* `filename`: The path to the `.env` file.
+* `filename ...string`: Optional path to the `.env.development` file. If no filename is provided, it loads from the default `.env` file.
 * Panics if the file cannot be opened or read.
 
 &nbsp;
@@ -124,6 +138,8 @@ Loads environment variables from the specified `.env` file and panics if an erro
 * **Existing environment variable preservation**: Only sets variables that are not already set.
 * **Convenient functions**: `Lookup` and `Get` for easy access to environment variables.
 * **Error handling**: Provides error return values for robust applications.
+* **Automatic `.env` loading**: Loads `.env` by default without needing to specify a filename.
+* **Global variable initialization**: Easily initialize global variables with environment values.
 * **`MustLoad` function**: for cases where the env file is critical to application functionality.
 
 &nbsp;

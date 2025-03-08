@@ -6,17 +6,55 @@ import (
 	"strings"
 )
 
-// Load loads environment variables from a .env file.
-func Load(filename string) error {
+// Get retrieves the value of an environment variable.
+// If the variable does not exist, it returns the provided default value.
+func Get(key string, defaultValue ...string) string {
 
-	file, err := os.Open(filename)
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+
+	if len(defaultValue) > 0 {
+		return defaultValue[0]
+	}
+
+	return "" // Return empty string if no default provided.
+
+}
+
+// Lookup retrieves the value of an environment variable.
+// It returns the value and a boolean indicating whether the variable exists.
+func Lookup(key string) (string, bool) {
+
+	value, exists := os.LookupEnv(key)
+	return value, exists
+
+}
+
+// Load loads environment variables from a .env file.
+// If filename is empty, it loads from the default ".env" file.
+// If no filename is provided, it attempts to load ".env" automatically.
+func Load(filename ...string) error {
+
+	var fileToLoad string
+
+	if len(filename) > 0 && filename[0] != "" {
+		fileToLoad = filename[0]
+	} else {
+		fileToLoad = ".env"
+	}
+
+	file, err := os.Open(fileToLoad)
 	if err != nil {
+		if os.IsNotExist(err) && fileToLoad == ".env" && (len(filename) == 0 || filename[0] == "") {
+			// If .env doesn't exist and it was the default, don't return an error.
+			return nil
+		}
 		return err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-
 	for scanner.Scan() {
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
@@ -36,7 +74,6 @@ func Load(filename string) error {
 		if os.Getenv(key) == "" { // Only set if not already set
 			os.Setenv(key, value)
 		}
-
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -44,34 +81,13 @@ func Load(filename string) error {
 	}
 
 	return nil
-
-}
-
-// Lookup retrieves the value of an environment variable.
-// It returns the value and a boolean indicating whether the variable exists.
-func Lookup(key string) (string, bool) {
-
-	value, exists := os.LookupEnv(key)
-	return value, exists
-
-}
-
-// Get retrieves the value of an environment variable.
-// If the variable does not exist, it returns the provided default value.
-func Get(key, defaultValue string) string {
-
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-
-	return defaultValue
-
 }
 
 // MustLoad loads environment variables from a .env file and panics on error.
-func MustLoad(filename string) {
+// If filename is empty, it loads from the default ".env" file.
+func MustLoad(filename ...string) {
 
-	if err := Load(filename); err != nil {
+	if err := Load(filename...); err != nil {
 		panic(err)
 	}
 
