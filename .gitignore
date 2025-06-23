@@ -1,1 +1,39 @@
+# Build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE files
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (real secrets should not be committed)
+.env
+.env.local
+.env.*.local
+
+# Example-generated files
+!examples/*/*.env
+examples/*/backup.env
+examples/*/exported.env
+examples/*/special.env
+examples/*/demo.env
+examples/*/test*.env
+
