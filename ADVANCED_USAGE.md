@@ -10,11 +10,68 @@ This guide demonstrates advanced usage patterns and best practices for the Go En
 
 ## Table of Contents
 
-1. [Sealed Secrets Workflow](#sealed-secrets-workflow)
-2. [Environment-Specific Configurations](#environment-specific-configurations)
-3. [Security Best Practices](#security-best-practices)
-4. [Error Handling](#error-handling)
-5. [Performance Considerations](#performance-considerations)
+1. [Struct Tag Format](#struct-tag-format)
+2. [Sealed Secrets Workflow](#sealed-secrets-workflow)
+3. [Environment-Specific Configurations](#environment-specific-configurations)
+4. [Security Best Practices](#security-best-practices)
+5. [Error Handling](#error-handling)
+6. [Performance Considerations](#performance-considerations)
+
+&nbsp;
+
+## Struct Tag Format
+
+Go Env uses a clean, single tag format for defining environment variable bindings in your structs:
+
+&nbsp;
+
+### Combined Tag Format
+
+All configuration is specified in the `env` tag using a comma-separated format:
+
+```go
+type Config struct {
+    Host     string        `env:"HOST,default=localhost"`
+    Port     int           `env:"PORT,default=8080"`
+    Debug    bool          `env:"DEBUG,default=false"`
+    Timeout  time.Duration `env:"TIMEOUT,default=30s"`
+    APIKey   string        `env:"API_KEY,required"`
+}
+```
+
+&nbsp;
+
+### Tag Format Features
+
+**Supported options:**
+
+- **Environment variable name**: First parameter (required)
+- **Default values**: `default=value` - used when environment variable is not set
+- **Required fields**: `required` - causes binding to fail if environment variable is missing
+- **All Go types**: strings, numbers, booleans, time.Duration, slices
+- **Nested structs and embedded fields**
+
+&nbsp;
+
+### Complex Default Values
+
+The tag format handles complex default values gracefully:
+
+```go
+type AppConfig struct {
+    // Default values with commas
+    Tags         string `env:"TAGS,default=web,api,backend"`
+
+    // Default values with equals signs
+    Config       string `env:"CONFIG,default=key=value,debug=true"`
+
+    // Multiple options with default
+    DatabaseURL  string `env:"DATABASE_URL,required,default=postgres://localhost/myapp"`
+
+    // Empty defaults
+    OptionalPath string `env:"OPTIONAL_PATH,default="`
+}
+```
 
 &nbsp;
 

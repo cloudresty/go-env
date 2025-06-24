@@ -46,8 +46,9 @@ var (
 
 // tagInfo caches parsed tag data
 type tagInfo struct {
-	envKey     string
-	isRequired bool
+	envKey       string
+	isRequired   bool
+	defaultValue string
 }
 
 // typeInfo caches reflection information for a struct type
@@ -68,19 +69,17 @@ type fieldInfo struct {
 
 // BindingOptions provides configuration for struct binding
 type BindingOptions struct {
-	Tag          string // Tag name to look for (default: "env")
-	Required     bool   // Whether to fail if required fields are missing
-	Prefix       string // Prefix to add to all environment variable names
-	DefaultValue string // Default tag name for default values (default: "default")
+	Tag      string // Tag name to look for (default: "env")
+	Required bool   // Whether to fail if required fields are missing
+	Prefix   string // Prefix to add to all environment variable names
 }
 
 // DefaultBindingOptions returns default binding options
 func DefaultBindingOptions() BindingOptions {
 	return BindingOptions{
-		Tag:          "env",
-		Required:     false,
-		Prefix:       "",
-		DefaultValue: "default",
+		Tag:      "env",
+		Required: false,
+		Prefix:   "",
 	}
 }
 
@@ -89,11 +88,11 @@ func DefaultBindingOptions() BindingOptions {
 // Example usage:
 //
 //	type Config struct {
-//		Port     int    `env:"PORT" default:"8080"`
-//		Host     string `env:"HOST" default:"localhost"`
-//		Debug    bool   `env:"DEBUG" default:"false"`
+//		Port     int    `env:"PORT,default=8080"`
+//		Host     string `env:"HOST,default=localhost"`
+//		Debug    bool   `env:"DEBUG,default=false"`
 //		Features []string `env:"FEATURES"`
-//		Timeout  time.Duration `env:"TIMEOUT" default:"30s"`
+//		Timeout  time.Duration `env:"TIMEOUT,default=30s"`
 //	}
 //	var config Config
 //	err := env.Bind(&config, env.DefaultBindingOptions())
@@ -139,18 +138,16 @@ func bindStruct(structValue reflect.Value, structType reflect.Type, options Bind
 		}
 
 		// Parse tag options efficiently (avoid repeated allocations)
-		envKey, isRequired := parseTag(fieldInfo.tag, options)
+		envKey, isRequired, tagDefaultValue := parseTag(fieldInfo.tag, options)
 
 		// Get the environment variable value
 		envValue, exists := os.LookupEnv(envKey)
 
 		// Handle missing values
 		if !exists {
-			// Check for default value using cached struct field
-			structField := structType.Field(fieldInfo.index)
-			defaultValue := structField.Tag.Get(options.DefaultValue)
-			if defaultValue != "" {
-				envValue = defaultValue
+			// Use default value from combined tag format only
+			if tagDefaultValue != "" {
+				envValue = tagDefaultValue
 			} else if isRequired || options.Required {
 				return fmt.Errorf("required environment variable %s is not set for field %s", envKey, fieldInfo.name)
 			} else {
@@ -213,9 +210,9 @@ func getTypeInfo(t reflect.Type) *typeInfo {
 }
 
 // parseTag parses tag options efficiently with caching and minimal allocations
-func parseTag(tag string, options BindingOptions) (envKey string, isRequired bool) {
+func parseTag(tag string, options BindingOptions) (envKey string, isRequired bool, defaultValue string) {
 	if tag == "" {
-		return "", false
+		return "", false, ""
 	}
 
 	// Create cache key including prefix for proper caching
@@ -229,7 +226,7 @@ func parseTag(tag string, options BindingOptions) (envKey string, isRequired boo
 	if info, exists := tagCache[cacheKey]; exists {
 		tagCacheMutex.RUnlock()
 		atomic.AddInt64(&tagCacheHits, 1)
-		return info.envKey, info.isRequired
+		return info.envKey, info.isRequired, info.defaultValue
 	}
 	tagCacheMutex.RUnlock()
 	atomic.AddInt64(&tagCacheMisses, 1)
@@ -240,7 +237,7 @@ func parseTag(tag string, options BindingOptions) (envKey string, isRequired boo
 
 	// Double-check after acquiring write lock
 	if info, exists := tagCache[cacheKey]; exists {
-		return info.envKey, info.isRequired
+		return info.envKey, info.isRequired, info.defaultValue
 	}
 
 	// Fast path for simple tags (no comma) - optimized with IndexByte
@@ -251,25 +248,59 @@ func parseTag(tag string, options BindingOptions) (envKey string, isRequired boo
 			envKey = options.Prefix + envKey
 		}
 		isRequired = false
+		defaultValue = ""
 	} else {
 		// Parse complex tags
 		envKey = tag[:commaIndex]
 		if options.Prefix != "" {
 			envKey = options.Prefix + envKey
-		}
-
-		// Optimized required check using byte-level search
+		} // Parse options after the comma
 		remainingTag := tag[commaIndex+1:]
+
+		// Check for required option
 		isRequired = strings.Contains(remainingTag, "required")
+
+		// Extract default value from "default=value" format
+		defaultValue = ""
+		if defaultIndex := strings.Index(remainingTag, "default="); defaultIndex != -1 {
+			// Find the start of the default value
+			valueStart := defaultIndex + len("default=")
+
+			// For default values, we need to be more careful about parsing
+			// The value extends to the end of the string or to the next option
+			// Options are: "required", or another "option=value" pattern
+			valueEnd := len(remainingTag)
+
+			// Look for the next option after the default value
+			// We need to find patterns like ",required" or ",option="
+			remainder := remainingTag[valueStart:]
+
+			// Find the next option by looking for patterns that start with comma
+			// followed by known option names or option=value patterns
+			for i := 0; i < len(remainder); i++ {
+				if remainder[i] == ',' {
+					// Check if this comma starts a new option
+					after := remainder[i+1:]
+					if strings.HasPrefix(after, "required") ||
+						strings.Contains(after, "=") {
+						valueEnd = valueStart + i
+						break
+					}
+				}
+			}
+
+			defaultValue = remainingTag[valueStart:valueEnd]
+		}
 	}
 
 	// Cache the result for future use
 	tagCache[cacheKey] = tagInfo{
-		envKey:     envKey,
-		isRequired: isRequired,
+		envKey:       envKey,
+		isRequired:   isRequired,
+		defaultValue: defaultValue,
 	}
 
-	return envKey, isRequired
+	return envKey, isRequired, defaultValue
 }
 
 // setField sets field values with optimizations for common types
@@ -437,10 +468,9 @@ func setSlice(field reflect.Value, value string) error {
 // This is a simplified version of Bind for backward compatibility.
 func BindJSON(tag string, out interface{}) error {
 	options := BindingOptions{
-		Tag:          tag,
-		Required:     false,
-		Prefix:       "",
-		DefaultValue: "default",
+		Tag:      tag,
+		Required: false,
+		Prefix:   "",
 	}
 	return Bind(out, options)
 }

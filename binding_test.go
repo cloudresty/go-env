@@ -7,12 +7,12 @@ import (
 )
 
 type TestConfig struct {
-	StringField   string        `env:"STRING_FIELD" default:"default_string"`
-	IntField      int           `env:"INT_FIELD" default:"42"`
-	BoolField     bool          `env:"BOOL_FIELD" default:"true"`
-	FloatField    float64       `env:"FLOAT_FIELD" default:"3.14"`
-	DurationField time.Duration `env:"DURATION_FIELD" default:"5m"`
-	SliceField    []string      `env:"SLICE_FIELD" default:"a,b,c"`
+	StringField   string        `env:"STRING_FIELD,default=default_string"`
+	IntField      int           `env:"INT_FIELD,default=42"`
+	BoolField     bool          `env:"BOOL_FIELD,default=true"`
+	FloatField    float64       `env:"FLOAT_FIELD,default=3.14"`
+	DurationField time.Duration `env:"DURATION_FIELD,default=5m"`
+	SliceField    []string      `env:"SLICE_FIELD,default=a,b,c"`
 	RequiredField string        `env:"REQUIRED_FIELD,required"`
 }
 
@@ -22,13 +22,13 @@ type NestedConfig struct {
 }
 
 type ParentConfig struct {
-	Name string `env:"PARENT_NAME" default:"parent"`
-	Age  int    `env:"PARENT_AGE" default:"30"`
+	Name string `env:"PARENT_NAME,default=parent"`
+	Age  int    `env:"PARENT_AGE,default=30"`
 }
 
 type ChildConfig struct {
-	Name string `env:"CHILD_NAME" default:"child"`
-	Age  int    `env:"CHILD_AGE" default:"5"`
+	Name string `env:"CHILD_NAME,default=child"`
+	Age  int    `env:"CHILD_AGE,default=5"`
 }
 
 func TestBind(t *testing.T) {
@@ -160,10 +160,9 @@ func TestBindWithPrefix(t *testing.T) {
 
 	var config TestConfig
 	options := BindingOptions{
-		Tag:          "env",
-		Prefix:       "TEST_",
-		Required:     false,
-		DefaultValue: "default",
+		Tag:      "env",
+		Prefix:   "TEST_",
+		Required: false,
 	}
 
 	err := Bind(&config, options)
