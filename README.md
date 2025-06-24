@@ -47,11 +47,11 @@ env.Set("API_KEY", "secret-key-123")
 
 // Struct binding with type conversion
 type Config struct {
-    Port     int           `env:"PORT" default:"8080"`
-    Host     string        `env:"HOST" default:"localhost"`
-    Debug    bool          `env:"DEBUG" default:"false"`
+    Port     int           `env:"PORT,default=8080"`
+    Host     string        `env:"HOST,default=localhost"`
+    Debug    bool          `env:"DEBUG,default=false"`
     Features []string      `env:"FEATURES"`
-    Timeout  time.Duration `env:"TIMEOUT" default:"30s"`
+    Timeout  time.Duration `env:"TIMEOUT,default=30s"`
 }
 var config Config
 env.Bind(&config, env.DefaultBindingOptions())
@@ -428,24 +428,28 @@ err := env.Save("backup.env", keys)
 // Define your configuration struct
 type Config struct {
     // Basic types with defaults
-    Port     int    `env:"PORT" default:"8080"`
-    Host     string `env:"HOST" default:"localhost"`
-    Debug    bool   `env:"DEBUG" default:"false"`
+    Port     int    `env:"PORT,default=8080"`
+    Host     string `env:"HOST,default=localhost"`
+    Debug    bool   `env:"DEBUG,default=false"`
 
     // Advanced types
-    Timeout  time.Duration `env:"TIMEOUT" default:"30s"`
+    Duration time.Duration `env:"DURATION,default=30s"`
     Features []string      `env:"FEATURES"`            // Comma-separated
 
     // Required fields
     APIKey   string `env:"API_KEY,required"`
+
+    // Complex defaults with commas and special characters
+    Tags     string `env:"TAGS,default=web,api,backend"`
+    Config   string `env:"CONFIG,default=key=value,debug=true"`
 
     // Nested structs
     Database DBConfig `env:"DB"`
 }
 
 type DBConfig struct {
-    Host string `env:"DB_HOST" default:"localhost"`
-    Port int    `env:"DB_PORT" default:"5432"`
+    Host string `env:"DB_HOST,default=localhost"`
+    Port int    `env:"DB_PORT,default=5432"`
 }
 
 // Bind environment variables to struct

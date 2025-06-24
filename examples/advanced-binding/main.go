@@ -12,23 +12,23 @@ import (
 // Config demonstrates advanced struct binding with various data types
 type Config struct {
 	// Basic types with defaults
-	AppName string `env:"APP_NAME" default:"MyApp"`
-	Port    int    `env:"PORT" default:"8080"`
-	Debug   bool   `env:"DEBUG" default:"false"`
-	Host    string `env:"HOST" default:"localhost"`
+	AppName string `env:"APP_NAME,default=MyApp"`
+	Port    int    `env:"PORT,default=8080"`
+	Debug   bool   `env:"DEBUG,default=false"`
+	Host    string `env:"HOST,default=localhost"`
 
 	// Numeric types
-	MaxConnections int64   `env:"MAX_CONNECTIONS" default:"100"`
-	Timeout        float64 `env:"TIMEOUT_SECONDS" default:"30.5"`
-	BufferSize     uint    `env:"BUFFER_SIZE" default:"1024"`
+	MaxConnections int64   `env:"MAX_CONNECTIONS,default=100"`
+	Timeout        float64 `env:"TIMEOUT_SECONDS,default=30.5"`
+	BufferSize     uint    `env:"BUFFER_SIZE,default=1024"`
 
 	// Duration support
-	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" default:"30s"`
-	SessionTimeout time.Duration `env:"SESSION_TIMEOUT" default:"24h"`
+	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT,default=30s"`
+	SessionTimeout time.Duration `env:"SESSION_TIMEOUT,default=24h"`
 
 	// Slices
-	AllowedHosts []string `env:"ALLOWED_HOSTS" default:"localhost,127.0.0.1"`
-	TrustedPorts []int    `env:"TRUSTED_PORTS" default:"80,443,8080"`
+	AllowedHosts []string `env:"ALLOWED_HOSTS,default=localhost,127.0.0.1"`
+	TrustedPorts []int    `env:"TRUSTED_PORTS,default=80,443,8080"`
 
 	// Required fields (will fail if not provided)
 	DatabaseURL string `env:"DATABASE_URL,required"`
@@ -38,10 +38,10 @@ type Config struct {
 }
 
 type RedisConfig struct {
-	Host     string `env:"REDIS_HOST" default:"localhost"`
-	Port     int    `env:"REDIS_PORT" default:"6379"`
+	Host     string `env:"REDIS_HOST,default=localhost"`
+	Port     int    `env:"REDIS_PORT,default=6379"`
 	Password string `env:"REDIS_PASSWORD"`
-	DB       int    `env:"REDIS_DB" default:"0"`
+	DB       int    `env:"REDIS_DB,default=0"`
 }
 
 func main() {
